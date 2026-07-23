@@ -1,0 +1,33 @@
+# Virtual environment
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML models
+*.pt
+*.pth
+*.h5
+*.ckpt
+*.onnx
+*.safetensors
+
+# Hugging Face cache
+.hf_cache/
+**/.hf_cache/
+
+# Dataset folders
+dataset/
+datasets/
+raw_dataset/
+Depression_detection/raw_features/
+
+# Generated feature files
+*.npy

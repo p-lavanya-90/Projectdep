@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+python-multipart
+torch
+torchvision
+transformers
+librosa
+numpy==1.26.4
+pandas
+joblib
+scikit-learn
+xgboost
+lightgbm
+SpeechRecognition
+Pillow
