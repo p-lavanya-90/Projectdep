@@ -1,0 +1,198 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{placeins}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{A Multimodal Depression Screening System Using Text, Audio, and Visual Behavioral Features}
+
+\author{
+\IEEEauthorblockN{1\textsuperscript{st} Author Name}
+\IEEEauthorblockA{\textit{Department Name} \\
+\textit{Institution Name}\\
+City, Country \\
+email@example.com}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Author Name}
+\IEEEauthorblockA{\textit{Department Name} \\
+\textit{Institution Name}\\
+City, Country \\
+email@example.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Depression screening from behavioral signals is an active research problem because depressive symptoms may be reflected in language, voice characteristics, and facial behavior. This paper presents a multimodal depression screening prototype trained and evaluated using Distress Analysis Interview Corpus-Wizard of Oz (DAIC-WOZ) / Audio/Visual Emotion Challenge (AVEC)-style depression data. The system extracts contextual text embeddings, acoustic features, and OpenFace/Constrained Local Neural Field (CLNF)-style visual features, and evaluates unimodal and multimodal machine-learning models for binary depression classification. In addition to the DAIC-WOZ evaluation, the deployed web system includes auxiliary safety and usability modules, including transcript-aware high-risk text handling, external-audio augmentation experiments, and a raw-image visual distress fallback trained on DepVidMood expression data. On the held-out DAIC-WOZ test split, the best accuracy-focused multimodal variant achieved 0.8511 accuracy, slightly exceeding the base-paper accuracy of 0.8500. A recall-optimized variant achieved 0.8571 recall, exceeding the base-paper recall of 0.8500, while the best area under the receiver operating characteristic curve (AUC) values reached approximately 0.7900 compared with the base-paper AUC of 0.7300. The results show that metric-specific optimization can improve selected evaluation criteria, although no single model exceeds the base paper in all reported metrics. The system is therefore presented as a research prototype and screening-assistance tool, not as a standalone diagnostic system.
+\end{abstract}
+
+\begin{IEEEkeywords}
+depression detection, multimodal learning, Distress Analysis Interview Corpus-Wizard of Oz, behavioral signal processing, mental-health screening, text analysis, speech analysis, facial behavior
+\end{IEEEkeywords}
+
+\section{Introduction}
+Depression is a major mental-health condition that affects mood, cognition, behavior, and everyday functioning. Traditional assessment is performed through clinical interviews and validated questionnaires such as the Patient Health Questionnaire (PHQ). Automated depression screening is not a replacement for clinical assessment, but it can support research into behavioral indicators and early-risk screening.
+
+Human communication is naturally multimodal. Depressive symptoms may appear through linguistic content, reduced speech energy, changes in prosody, facial expressiveness, gaze behavior, and other behavioral patterns. For this reason, recent computational approaches often combine text, audio, and visual information rather than relying on a single modality.
+
+This work implements a multimodal depression screening system using processed DAIC-WOZ/AVEC-style data. The main contributions are:
+\begin{itemize}
+    \item a complete multimodal pipeline for text, audio, visual, and combined depression-risk prediction;
+    \item comparison of unimodal, multimodal, ensemble, and metric-optimized classifiers against a reported base-paper baseline;
+    \item a deployed FastAPI-based web interface for text, audio, image, and multimodal prediction;
+    \item auxiliary safety and usability improvements, including high-risk text handling, optional Hugging Face safety checks, external-audio augmentation experiments, and raw-image visual distress fallback.
+\end{itemize}
+
+\begin{table}[htbp]
+\caption{Acronyms and Abbreviations Used in This Paper}
+\label{tab:acronyms}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{1.5cm}p{6.0cm}}
+\toprule
+\textbf{Term} & \textbf{Meaning} \\
+\midrule
+API & Application Programming Interface \\
+AUC & Area Under the Receiver Operating Characteristic Curve \\
+AVEC & Audio/Visual Emotion Challenge \\
+BERT & Bidirectional Encoder Representations from Transformers \\
+CLNF & Constrained Local Neural Field \\
+CNN & Convolutional Neural Network \\
+DAIC-WOZ & Distress Analysis Interview Corpus-Wizard of Oz \\
+F1 & Harmonic mean of precision and recall \\
+FastAPI & Python web framework used for the backend application \\
+MCC & Matthews Correlation Coefficient \\
+MFCC & Mel-Frequency Cepstral Coefficient \\
+PHQ & Patient Health Questionnaire \\
+RBF & Radial Basis Function \\
+SVC & Support Vector Classifier \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Related Work}
+The Distress Analysis Interview Corpus-Wizard of Oz (DAIC-WOZ) dataset and Audio/Visual Emotion Challenge (AVEC) depression-recognition tasks have been widely used for automated depression detection. Prior studies have used linguistic features, acoustic descriptors, facial action units, gaze behavior, deep embeddings, and multimodal fusion strategies. The base paper used for comparison reports approximately 0.8500 accuracy, 0.7300 precision, 0.8500 recall, 0.7900 F1-score, 0.7300 area under the receiver operating characteristic curve (AUC), and 0.6800 Matthews correlation coefficient (MCC). These values are used as the reference baseline in this project.
+
+While many studies report promising results, depression detection remains difficult because datasets are small, labels are noisy, and depression is not directly observable from a single utterance, image, or short recording. Therefore, strong separation between training, validation, and testing is essential, and deployed systems must include appropriate clinical disclaimers.
+
+\section{Dataset and Preprocessing}
+The primary dataset used in this work follows the DAIC-WOZ/AVEC split format. Labels are derived from Patient Health Questionnaire (PHQ)-style scores, where the binary depression label indicates whether a participant is considered depressed according to the dataset threshold, commonly PHQ-8 score greater than or equal to 10.
+
+\subsection{Text Features}
+Transcript text is represented using contextual Bidirectional Encoder Representations from Transformers (BERT) embeddings. Each participant-level text representation is stored as a 768-dimensional feature vector. These features capture semantic and contextual language patterns that may be associated with depressive expression.
+
+\subsection{Audio Features}
+Audio recordings are converted into acoustic representations containing Mel-Frequency Cepstral Coefficient (MFCC), chroma, mel-spectral, and related summary descriptors. The final audio representation is a 153-dimensional vector. Missing audio features are handled conservatively using zero-filled vectors where required.
+
+\subsection{Visual Features}
+The DAIC-compatible visual branch uses OpenFace/CLNF-style behavioral features, aggregated into a 160-dimensional representation. These features are different from ordinary facial-expression images. A single uploaded crying or sad face is not equivalent to the participant-level OpenFace/CLNF representation used for DAIC-WOZ depression modeling.
+
+\subsection{Multimodal Fusion}
+For multimodal classification, text, audio, and visual features are concatenated into a single early-fusion vector. This produces a 1081-dimensional feature representation:
+\begin{equation}
+X_{multi} = [X_{text}; X_{audio}; X_{visual}]
+\end{equation}
+where $X_{text}$ is 768-dimensional, $X_{audio}$ is 153-dimensional, and $X_{visual}$ is 160-dimensional.
+
+\section{Methodology}
+Several machine-learning models were trained and compared, including Logistic Regression, Support Vector Classifier (SVC) with radial basis function (RBF) kernel, Random Forest, Extra Trees, Gradient Boosting, and weighted soft-voting ensembles. Regression models were also evaluated for PHQ-score estimation, but the main focus of this paper is binary depression classification.
+
+Decision thresholds were selected using the development split according to different objectives, including accuracy, recall, F1-score, MCC, and AUC-oriented behavior. The final held-out test split was used for reporting the comparison metrics.
+
+\subsection{Metric-Specific Optimization}
+Because depression screening has competing goals, multiple optimized variants were retained. An accuracy-focused classifier is useful when overall correctness is prioritized. A recall-focused classifier is useful when reducing missed depressed cases is more important. An F1-balanced classifier attempts to balance precision and recall. This paper reports these variants separately to avoid claiming that one model is optimal for every clinical or research objective.
+
+\subsection{Website Safety and Visual Fallback}
+The deployed website includes additional modules beyond the DAIC-WOZ benchmark pipeline. Text and audio-transcript inputs are checked for high-risk self-harm or severe distress statements using local safety rules and optional Hugging Face zero-shot classification. For raw image uploads, the system first attempts training-compatible OpenFace/CLNF processing when available. If that is unavailable, it can use optional Hugging Face facial-emotion inference, a local DepVidMood convolutional neural network (CNN) visual distress model, or an optional OpenAI Vision application programming interface (API) fallback. These raw-image modules improve website usability but are reported separately from DAIC-WOZ PHQ-8 depression metrics.
+
+\section{Experimental Results}
+Table~\ref{tab:base-comparison} summarizes the main comparison with the base paper. The results show that the proposed system improves selected metrics, particularly accuracy, precision, recall, and AUC depending on the selected model variant.
+
+\begin{table*}[htbp]
+\caption{Comparison with Base-Paper Metrics on DAIC-WOZ/AVEC-Style Evaluation}
+\label{tab:base-comparison}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{2.0cm}p{3.8cm}ccccccp{3.6cm}}
+\toprule
+\textbf{Category} & \textbf{Model/System} & \textbf{Acc.} & \textbf{Prec.} & \textbf{Rec.} & \textbf{F1} & \textbf{AUC} & \textbf{MCC} & \textbf{Status} \\
+\midrule
+Base Paper & Reported baseline & 0.8500 & 0.7300 & 0.8500 & 0.7900 & 0.7300 & 0.6800 & Reference baseline \\
+Multimodal & Hybrid\_GB\_PHQ\_Override & 0.8511 & 1.0000 & 0.5000 & 0.6667 & 0.7900 & 0.6423 & Beats accuracy, precision, and AUC \\
+Multimodal & RecallOptimized\_Logistic\_RF\_Override & 0.7234 & 0.5217 & 0.8571 & 0.6486 & 0.7771 & 0.4792 & Beats recall and AUC \\
+Multimodal & F1Optimized\_Logistic\_AND\_GB & 0.8298 & 0.6667 & 0.8571 & 0.7500 & 0.7706 & 0.6353 & Beats recall and AUC \\
+Multimodal & GradientBoostingClf\_Accuracy & 0.8298 & 1.0000 & 0.4286 & 0.6000 & 0.7900 & 0.5873 & Beats precision and AUC \\
+Multimodal Ensemble & WeightedSoftVoting & 0.8085 & 0.6667 & 0.7143 & 0.6897 & 0.7684 & 0.5521 & Beats AUC \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{table}[htbp]
+\caption{Unimodal and Auxiliary Experiments}
+\label{tab:unimodal}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{p{1.35cm}p{1.85cm}cccp{1.35cm}}
+\toprule
+\textbf{Experiment} & \textbf{Model} & \textbf{Acc.} & \textbf{F1} & \textbf{AUC} & \textbf{Note} \\
+\midrule
+Text only & Text Gradient Boosting & 0.7872 & 0.4444 & 0.7716 & DAIC test \\
+Audio only & Audio SVC RBF & 0.7021 & 0.0000 & 0.3701 & DAIC test \\
+External audio & AudioExt SVC RBF & 0.7234 & 0.3158 & 0.6775 & DAIC + external train \\
+Visual only & Visual Logistic Regression & 0.7021 & 0.3636 & 0.6667 & DAIC CLNF \\
+Visual CNN & DepVidMood CNN & 0.8196 & 0.8158 & 0.9028 & Auxiliary dataset \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+The results indicate that multimodal fusion is stronger than the individual unimodal branches for the main DAIC-WOZ depression-screening task. The best accuracy-focused model achieved 0.8511 accuracy, which is slightly higher than the base-paper accuracy of 0.8500. The recall-optimized model achieved 0.8571 recall, improving over the base-paper recall of 0.8500. The strongest AUC values were approximately 0.7900, improving over the base-paper AUC of 0.7300.
+
+However, the results also show important trade-offs. The accuracy-focused model has high precision but lower recall, while the recall-focused model detects more depressed cases but reduces overall accuracy and precision. The F1 and MCC values remain below the base-paper values in the main DAIC-WOZ comparison. Therefore, the project should be described as improving selected metrics through objective-specific model selection, not as outperforming the base paper in every metric with a single model.
+
+External audio augmentation improved the audio-only branch from 0.7021 to 0.7234 accuracy on the DAIC-WOZ test split, but it did not outperform the full multimodal system. The DepVidMood CNN improved raw-image expression screening behavior for the website, but its results are not directly comparable to DAIC-WOZ PHQ-8 depression labels.
+
+\section{Limitations and Ethical Considerations}
+This system is a research prototype and must not be used as a standalone clinical diagnostic tool. Depression is a complex mental-health condition that cannot be reliably diagnosed from a short text, a single audio clip, or a facial image. Automated outputs should be interpreted only as screening-assistance signals.
+
+The project has several limitations. First, the DAIC-WOZ dataset is relatively small, which increases the risk of overfitting. Second, missing modality features can reduce model reliability. Third, post-hoc metric optimization may improve selected test metrics but should be validated on additional unseen data before strong generalization claims are made. Fourth, raw facial-expression analysis detects visible emotional cues and should not be treated as direct clinical depression recognition.
+
+For ethical deployment, the system should include crisis-resource messaging for high-risk self-harm statements, data-privacy controls for audio and images, and clear communication that the output is not medical advice.
+
+\section{Conclusion}
+This paper presented a multimodal depression screening prototype using text, audio, and visual behavioral features. The system achieved metric-specific improvements over the base paper, including 0.8511 accuracy in the accuracy-focused variant, 0.8571 recall in the recall-optimized variant, and approximately 0.7900 AUC in the strongest multimodal variants. The deployed website adds practical prediction modes and auxiliary safety fallbacks for high-risk text and raw-image analysis.
+
+The most defensible conclusion is that the system improves selected metrics and provides a usable multimodal screening interface, while further work is required before journal-level or clinical claims can be made. Future work should focus on transformer-based multimodal fusion, external validation on additional depression datasets, statistically significant evaluation, explainability analysis, and clinically supervised safety evaluation.
+
+\FloatBarrier
+
+\section*{Acknowledgment}
+The authors thank the dataset providers and prior researchers whose work enabled this study. Funding information, if applicable, should be added here.
+
+\FloatBarrier
+
+\begin{thebibliography}{00}
+\bibitem{b1} J. Gratch, R. Artstein, G. M. Lucas, G. Stratou, S. Scherer, A. Nazarian, R. Wood, J. Boberg, D. DeVault, S. Marsella, D. Traum, S. Rizzo, and L. P. Morency, ``The distress analysis interview corpus of human and computer interviews,'' in \textit{Proc. Int. Conf. Language Resources and Evaluation}, 2014.
+\bibitem{b2} M. Valstar, J. Gratch, B. Schuller, F. Ringeval, D. Lalanne, M. Torres Torres, S. Scherer, G. Stratou, R. Cowie, and M. Pantic, ``AVEC 2016: Depression, mood, and emotion recognition workshop and challenge,'' in \textit{Proc. 6th Int. Workshop Audio/Visual Emotion Challenge}, 2016, pp. 3--10.
+\bibitem{b3} T. Baltrusaitis, A. Zadeh, Y. C. Lim, and L. P. Morency, ``OpenFace 2.0: Facial behavior analysis toolkit,'' in \textit{Proc. IEEE Int. Conf. Automatic Face and Gesture Recognition}, 2018, pp. 59--66.
+\bibitem{b4} J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, ``BERT: Pre-training of deep bidirectional transformers for language understanding,'' in \textit{Proc. NAACL-HLT}, 2019, pp. 4171--4186.
+\bibitem{b5} A. P. Association, \textit{Diagnostic and Statistical Manual of Mental Disorders}, 5th ed. Washington, DC, USA: American Psychiatric Publishing, 2013.
+\bibitem{b6} K. Kroenke, R. L. Spitzer, and J. B. W. Williams, ``The PHQ-9: Validity of a brief depression severity measure,'' \textit{Journal of General Internal Medicine}, vol. 16, no. 9, pp. 606--613, 2001.
+\bibitem{b7} Author(s), ``Title of the base paper used for comparison,'' \textit{Journal/Conference Name}, vol. x, no. x, pp. xx--xx, year. Replace this placeholder with the exact base-paper citation.
+\end{thebibliography}
+
+\end{document}

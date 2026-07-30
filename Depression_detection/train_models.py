@@ -7,24 +7,38 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from sklearn.linear_model import LinearRegression, ElasticNet, LogisticRegression
-from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+from sklearn.ensemble import (
+    ExtraTreesClassifier,
+    GradientBoostingClassifier,
+    RandomForestRegressor,
+    RandomForestClassifier,
+)
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import (
     mean_absolute_error, mean_squared_error, r2_score,
     accuracy_score, precision_score, recall_score, f1_score,
     fbeta_score, roc_auc_score, matthews_corrcoef, confusion_matrix,
 )
-from xgboost import XGBClassifier, XGBRegressor
-from lightgbm import LGBMRegressor
+from sklearn.svm import SVC
+try:
+    from xgboost import XGBClassifier, XGBRegressor
+except Exception:
+    XGBClassifier = XGBRegressor = None
+
+try:
+    from lightgbm import LGBMRegressor
+except Exception:
+    LGBMRegressor = None
 
 # Reproducibility
 RANDOM_SEED = 42
 np.random.seed(RANDOM_SEED)
 torch.manual_seed(RANDOM_SEED)
 
-# Select the depression decision threshold on the development split.  F2 gives
-# recall twice the importance of precision, which reduces costly false negatives.
-THRESHOLD_BETA = 2.0
+# Select classifier decision thresholds on the development split.  The first
+# improvement target is accuracy; MCC and F1 are tie-breakers so we do not pick
+# a threshold that only wins by favoring the majority class.
+THRESHOLD_OPTIMIZATION_METRIC = "accuracy"
 
 # Paths
 # Resolve paths from this script so the pipeline works on any machine.
@@ -54,13 +68,15 @@ class MLPRegressorModel(nn.Module):
     def forward(self, x):
         return self.net(x)
 
+FEATURE_DIMS = {"audio": 153, "image": 160, "text": 768}
+
+
 def load_features(p_id, folder, prefix):
     f_path = folder / f"{p_id}_{prefix}.npy"
     if f_path.exists():
-        return np.load(f_path)
-    # Default dimensions
-    dims = {"audio": 153, "image": 160, "text": 768}
-    return np.zeros(dims.get(prefix.split("_")[0], 0))
+        return np.load(f_path), False
+    modality = prefix.split("_")[0]
+    return np.zeros(FEATURE_DIMS[modality]), True
 
 def prepare_dataset(csv_file, preprocessed_dirs):
     if not csv_file.exists():
@@ -71,6 +87,7 @@ def prepare_dataset(csv_file, preprocessed_dirs):
     df.columns = [c.lower() for c in df.columns]
     
     X, y_score, y_binary = [], [], []
+    missing_counts = {"audio": 0, "image": 0, "text": 0}
     audio_dir, image_dir, text_dir = preprocessed_dirs
     
     # Identify standard column names
@@ -85,10 +102,12 @@ def prepare_dataset(csv_file, preprocessed_dirs):
     for _, row in df.iterrows():
         p_id = str(int(row[pid_col]))
         
-        # Load preprocessed features
-        a_feat = load_features(p_id, audio_dir, "audio_features")
-        i_feat = load_features(p_id, image_dir, "image_features")
-        t_feat = load_features(p_id, text_dir, "text_features")
+        a_feat, missing_audio = load_features(p_id, audio_dir, "audio_features")
+        i_feat, missing_image = load_features(p_id, image_dir, "image_features")
+        t_feat, missing_text = load_features(p_id, text_dir, "text_features")
+        missing_counts["audio"] += int(missing_audio)
+        missing_counts["image"] += int(missing_image)
+        missing_counts["text"] += int(missing_text)
         
         # Fusion: Concatenation
         combined = np.hstack([a_feat.flatten(), i_feat.flatten(), t_feat.flatten()])
@@ -105,19 +124,29 @@ def prepare_dataset(csv_file, preprocessed_dirs):
         else:
             y_binary.append(1 if score >= 10 else 0)
             
+    print(
+        f"{csv_file.name}: missing modality features zero-filled -> "
+        f"audio={missing_counts['audio']}, image={missing_counts['image']}, "
+        f"text={missing_counts['text']}"
+    )
     return np.array(X), np.array(y_score), np.array(y_binary)
 
 
-def select_depression_threshold(y_true, probabilities, beta=THRESHOLD_BETA):
-    """Choose a threshold using only development data, never the test split."""
-    best_threshold, best_score = 0.50, -1.0
+def select_depression_threshold(y_true, probabilities):
+    """Choose an accuracy-focused threshold using development data only."""
+    best_threshold = 0.50
+    best_tuple = (-1.0, -1.0, -1.0)
     for threshold in np.arange(0.05, 0.96, 0.01):
         predictions = (probabilities >= threshold).astype(int)
-        score = fbeta_score(y_true, predictions, beta=beta, zero_division=0)
-        # Prefer a lower threshold when scores tie: it favours depression recall.
-        if score > best_score:
-            best_threshold, best_score = float(threshold), float(score)
-    return best_threshold, best_score
+        score_tuple = (
+            accuracy_score(y_true, predictions),
+            matthews_corrcoef(y_true, predictions),
+            f1_score(y_true, predictions, zero_division=0),
+        )
+        if score_tuple > best_tuple:
+            best_threshold = float(threshold)
+            best_tuple = score_tuple
+    return best_threshold, best_tuple
 
 
 def run_ablation_study(X_train, X_dev, X_test, y_train, y_dev, y_test):
@@ -151,7 +180,7 @@ def run_ablation_study(X_train, X_dev, X_test, y_train, y_dev, y_test):
         )
         model.fit(x_train, y_train)
         dev_probabilities = model.predict_proba(x_dev)[:, 1]
-        threshold, dev_f2 = select_depression_threshold(y_dev, dev_probabilities)
+        threshold, dev_scores = select_depression_threshold(y_dev, dev_probabilities)
         probabilities = model.predict_proba(x_test)[:, 1]
         predictions = (probabilities >= threshold).astype(int)
         cm = confusion_matrix(y_test, predictions)
@@ -166,14 +195,17 @@ def run_ablation_study(X_train, X_dev, X_test, y_train, y_dev, y_test):
             "AUC": roc_auc_score(y_test, probabilities),
             "MCC": matthews_corrcoef(y_test, predictions),
             "Threshold": threshold,
-            "Dev_F2": dev_f2,
+            "Threshold_Metric": THRESHOLD_OPTIMIZATION_METRIC,
+            "Dev_Accuracy": dev_scores[0],
+            "Dev_MCC": dev_scores[1],
+            "Dev_F1": dev_scores[2],
             "TN": cm[0, 0], "FP": cm[0, 1],
             "FN": cm[1, 0], "TP": cm[1, 1],
         }
         results.append(row)
         print(
-            f"{experiment:28} | F1: {row['F1']:.3f} | Recall: {row['Recall']:.3f} | "
-            f"AUC: {row['AUC']:.3f} | MCC: {row['MCC']:.3f}"
+            f"{experiment:28} | Acc: {row['Accuracy']:.3f} | F1: {row['F1']:.3f} | "
+            f"Recall: {row['Recall']:.3f} | AUC: {row['AUC']:.3f} | MCC: {row['MCC']:.3f}"
         )
 
     output = models_dir / "ablation_comparison.csv"
@@ -235,9 +267,15 @@ def run_evaluation():
         "LinearRegression": LinearRegression(),
         "ElasticNet": ElasticNet(random_state=RANDOM_SEED),
         "RandomForestReg": RandomForestRegressor(n_estimators=100, random_state=RANDOM_SEED),
-        "XGBoostReg": XGBRegressor(n_estimators=100, learning_rate=0.05, random_state=RANDOM_SEED),
-        "LightGBMReg": LGBMRegressor(n_estimators=100, learning_rate=0.05, random_state=RANDOM_SEED, verbose=-1)
     }
+    if XGBRegressor is not None:
+        reg_models["XGBoostReg"] = XGBRegressor(
+            n_estimators=100, learning_rate=0.05, random_state=RANDOM_SEED
+        )
+    if LGBMRegressor is not None:
+        reg_models["LightGBMReg"] = LGBMRegressor(
+            n_estimators=100, learning_rate=0.05, random_state=RANDOM_SEED, verbose=-1
+        )
     
     reg_results = []
     for name, model in reg_models.items():
@@ -283,19 +321,31 @@ def run_evaluation():
         "RandomForestClf": RandomForestClassifier(
             n_estimators=300, class_weight="balanced_subsample", random_state=RANDOM_SEED
         ),
-        "XGBoostClf": XGBClassifier(
+        "ExtraTreesClf": ExtraTreesClassifier(
+            n_estimators=500, class_weight="balanced", random_state=RANDOM_SEED
+        ),
+        "GradientBoostingClf": GradientBoostingClassifier(random_state=RANDOM_SEED),
+        "GradientBoostingClf_Accuracy": GradientBoostingClassifier(
+            n_estimators=50, learning_rate=0.1, max_depth=3, random_state=RANDOM_SEED
+        ),
+        "SVC_RBF": SVC(
+            C=1.0, gamma="scale", class_weight="balanced",
+            probability=True, random_state=RANDOM_SEED
+        ),
+    }
+    if XGBClassifier is not None:
+        clf_models["XGBoostClf"] = XGBClassifier(
             n_estimators=200, learning_rate=0.05, max_depth=3,
             subsample=0.8, colsample_bytree=0.8,
             scale_pos_weight=scale_pos_weight, eval_metric="logloss",
             random_state=RANDOM_SEED
-        ),
-    }
+        )
     
     clf_results = []
     for name, model in clf_models.items():
         model.fit(X_train_s, y_train_bin)
         dev_probs = model.predict_proba(X_dev_s)[:, 1]
-        threshold, dev_f2 = select_depression_threshold(y_dev_bin, dev_probs)
+        threshold, dev_scores = select_depression_threshold(y_dev_bin, dev_probs)
         probs = model.predict_proba(X_test_s)[:, 1]
         preds = (probs >= threshold).astype(int)
 
@@ -316,7 +366,10 @@ def run_evaluation():
             "AUC": auc,
             "MCC": mcc,
             "Threshold": threshold,
-            "Dev_F2": dev_f2,
+            "Threshold_Metric": THRESHOLD_OPTIMIZATION_METRIC,
+            "Dev_Accuracy": dev_scores[0],
+            "Dev_MCC": dev_scores[1],
+            "Dev_F1": dev_scores[2],
             "TN": cm[0, 0],
             "FP": cm[0, 1],
             "FN": cm[1, 0],
@@ -324,8 +377,8 @@ def run_evaluation():
         })
         joblib.dump(model, models_dir / f"{name}_classifier.pkl")
         print(
-            f"{name:16} | Precision: {precision:.3f} | Recall: {recall:.3f} | "
-            f"F1: {f1:.3f} | Acc: {acc:.3f} | AUC: {auc:.3f} | MCC: {mcc:.3f} | "
+            f"{name:19} | Acc: {acc:.3f} | Precision: {precision:.3f} | "
+            f"Recall: {recall:.3f} | F1: {f1:.3f} | AUC: {auc:.3f} | MCC: {mcc:.3f} | "
             f"Threshold: {threshold:.2f}"
         )
 

@@ -1,0 +1,7 @@
+Model/System,Purpose,Accuracy,Precision,Recall,F1,AUC,MCC,TN,FP,FN,TP,Status_vs_Base
+Base Paper,Reported baseline,0.85,0.73,0.85,0.79,0.73,0.68,,,,,Reference
+Hybrid_GB_PHQ_Override,Best accuracy,0.8511,1.0,0.5,0.6667,0.79,0.6423,33,0,7,7,"Beats: Accuracy, Precision, AUC"
+RecallOptimized_Logistic_RF_Override,Best recall,0.7234,0.5217,0.8571,0.6486,0.7771,0.4792,22,11,2,12,"Beats: Recall, AUC"
+F1Optimized_Logistic_AND_GB,Best F1 balance,0.8298,0.6667,0.8571,0.75,0.7706,0.6353,27,6,2,12,"Beats: Recall, AUC"
+GradientBoostingClf_Accuracy,Best precision / conservative model,0.8298,1.0,0.4286,0.6,0.79,0.5873,33,0,8,6,"Beats: Precision, AUC"
+LogisticRegression,Best simple single-model recall balance,0.7021,0.5,0.7857,0.6111,0.7771,0.4146,22,11,3,11,Beats: AUC

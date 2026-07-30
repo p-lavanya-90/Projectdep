@@ -1,0 +1,2 @@
+participant_id,phq_score,phq_binary,audio_feature_path,image_feature_path,text_feature_path,source_dataset
+example_001,12,1,path/to/audio.npy,path/to/image.npy,path/to/text.npy,external_train_only

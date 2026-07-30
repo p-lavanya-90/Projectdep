@@ -1130,21 +1130,34 @@
         disp.style.display = 'block';
 
         const pred = res.prediction || (res.phq_score_estimate >= 10 ? 'Depressed' : 'Normal');
+        const isInconclusive = res.status === 'inconclusive' || pred === 'Inconclusive';
         document.getElementById('label-txt').innerText = pred;
-        document.getElementById('label-txt').style.color = pred === 'Depressed' ? 'var(--secondary)' : 'var(--success)';
+        document.getElementById('label-txt').style.color = isInconclusive ? 'var(--text-muted)' : (pred === 'Depressed' ? 'var(--secondary)' : 'var(--success)');
 
-        const score = res.phq_score_estimate || 0;
-        document.getElementById('score-txt').innerText = score.toFixed(1);
+        const hasPhqScore = res.phq_score_estimate !== null && res.phq_score_estimate !== undefined && !Number.isNaN(Number(res.phq_score_estimate));
+        const score = hasPhqScore ? Number(res.phq_score_estimate) : null;
+        const probDep = Number(res.prob_depressed || 0);
+        document.getElementById('score-txt').innerText = isInconclusive ? '--' : (hasPhqScore ? score.toFixed(1) : `${(probDep * 100).toFixed(1)}%`);
 
-        let severity = 'Minimal';
-        if (score >= 20) severity = 'Severe';
-        else if (score >= 15) severity = 'Moderately Severe';
-        else if (score >= 10) severity = 'Moderate';
-        else if (score >= 5) severity = 'Mild';
+        let severity = 'Screening';
+        if (hasPhqScore) {
+          severity = 'Minimal';
+          if (score >= 20) severity = 'Severe';
+          else if (score >= 15) severity = 'Moderately Severe';
+          else if (score >= 10) severity = 'Moderate';
+          else if (score >= 5) severity = 'Mild';
+        }
+        const indicatorText = isInconclusive
+          ? 'Visual Analysis Unavailable'
+          : hasPhqScore
+          ? `${severity} Detection`
+          : `${pred === 'Depressed' ? 'Distress' : 'Low distress'} Screening`;
 
         document.getElementById('desc-txt').innerHTML = `
-          <div style="font-size:1.1rem; margin-bottom:10px;"><b>Clinical Indicator:</b> <span style="color:var(--accent)">${severity} Detection</span></div>
-          <p>Analysis of multimodal inputs suggest a ${pred.toLowerCase()} classification based on trained patterns.</p>
+          <div style="font-size:1.1rem; margin-bottom:10px;"><b>Clinical Indicator:</b> <span style="color:var(--accent)">${indicatorText}</span></div>
+          <p>${res.note || `Analysis suggests a ${pred.toLowerCase()} classification based on trained patterns.`}</p>
+          ${res.method ? `<p style="color:var(--text-muted); margin-top:8px;">Method: ${res.method}</p>` : ''}
+          ${res.visual_cues && res.visual_cues.length ? `<p style="color:var(--text-muted); margin-top:8px;">Visual cues: ${res.visual_cues.join(', ')}</p>` : ''}
           ${res.transcript ? `<div style="margin-top:20px; font-style:italic; border-left:3px solid var(--primary); padding-left:15px; color:var(--text-muted)">"${res.transcript}"</div>` : ''}
         `;
       } catch (e) {

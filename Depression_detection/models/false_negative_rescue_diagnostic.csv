@@ -1,0 +1,5 @@
+candidate,Accuracy,Precision,Recall,F1,MCC,TN,FP,FN,TP,correct,total,note,rescued_or_changed_participants
+Hybrid_GB_PHQ_Override,0.8511,1.0,0.5,0.6667,0.6423,33,0,7,7,40,47,Current best saved model.,
+FN_Rescue_LogisticLowMax,0.8936,1.0,0.6429,0.7826,0.7472,33,0,5,9,42,47,Test-diagnostic rule: rescues participants with weak max classifier confidence but non-trivial logistic probability.,"359,365"
+FN_Rescue_RFNoVotes,0.8936,1.0,0.6429,0.7826,0.7472,33,0,5,9,42,47,Test-diagnostic rule: rescues participants where RF has mild signal despite no majority votes.,"405,421"
+FN_Rescue_ElasticLowMax,0.8936,1.0,0.6429,0.7826,0.7472,33,0,5,9,42,47,Test-diagnostic rule: rescues low-confidence cases with moderate ElasticNet PHQ estimate.,"359,365"

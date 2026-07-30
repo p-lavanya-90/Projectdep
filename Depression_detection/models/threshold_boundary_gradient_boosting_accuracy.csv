@@ -1,0 +1,25 @@
+Participant_ID,PHQ_Score,Actual_Binary,Prob_Depressed,Threshold,Predicted_Binary,Prediction_Label,Actual_Label,Outcome,Distance_To_Threshold,Group
+311,21.0,1,0.9038680661922748,0.62,1,Depressed,Depressed,TP,0.2838680661922748,Lowest True Positive
+461,17.0,1,0.8449980880780299,0.62,1,Depressed,Depressed,TP,0.2249980880780299,Lowest True Positive
+309,15.0,1,0.8215762175590345,0.62,1,Depressed,Depressed,TP,0.2015762175590345,Lowest True Positive
+384,15.0,1,0.7923261559574624,0.62,1,Depressed,Depressed,TP,0.1723261559574623,Lowest True Positive
+308,22.0,1,0.7493273209707889,0.62,1,Depressed,Depressed,TP,0.1293273209707889,Lowest True Positive
+354,18.0,1,0.6679481800194116,0.62,1,Depressed,Depressed,TP,0.0479481800194115,Lowest True Positive
+301,3.0,0,0.5994568734749361,0.62,0,Non-Depressed,Non-Depressed,TN,-0.0205431265250638,Highest True Negative
+332,18.0,1,0.5359718873025051,0.62,0,Non-Depressed,Depressed,FN,-0.0840281126974948,False Negative
+361,0.0,0,0.5230438200669684,0.62,0,Non-Depressed,Non-Depressed,TN,-0.0969561799330316,Highest True Negative
+314,1.0,0,0.4869828972080814,0.62,0,Non-Depressed,Non-Depressed,TN,-0.1330171027919185,Highest True Negative
+387,2.0,0,0.3859703345522755,0.62,0,Non-Depressed,Non-Depressed,TN,-0.2340296654477244,Highest True Negative
+405,17.0,1,0.3464770734546097,0.62,0,Non-Depressed,Depressed,FN,-0.2735229265453902,False Negative
+399,7.0,0,0.3161582665404168,0.62,0,Non-Depressed,Non-Depressed,TN,-0.3038417334595832,Highest True Negative
+410,12.0,1,0.3037814362924391,0.62,0,Non-Depressed,Depressed,FN,-0.3162185637075608,False Negative
+300,2.0,0,0.3021508513818513,0.62,0,Non-Depressed,Non-Depressed,TN,-0.3178491486181486,Highest True Negative
+306,0.0,0,0.2733589062367286,0.62,0,Non-Depressed,Non-Depressed,TN,-0.3466410937632713,Highest True Negative
+359,13.0,1,0.2644783163539981,0.62,0,Non-Depressed,Depressed,FN,-0.3555216836460018,False Negative
+411,0.0,0,0.2451656609983352,0.62,0,Non-Depressed,Non-Depressed,TN,-0.3748343390016647,Highest True Negative
+442,6.0,0,0.2028114908136725,0.62,0,Non-Depressed,Non-Depressed,TN,-0.4171885091863274,Highest True Negative
+424,3.0,0,0.1754095216261924,0.62,0,Non-Depressed,Non-Depressed,TN,-0.4445904783738076,Highest True Negative
+365,12.0,1,0.1003764764226982,0.62,0,Non-Depressed,Depressed,FN,-0.5196235235773017,False Negative
+421,10.0,1,0.0514414967297696,0.62,0,Non-Depressed,Depressed,FN,-0.5685585032702303,False Negative
+453,17.0,1,0.0302959331923629,0.62,0,Non-Depressed,Depressed,FN,-0.589704066807637,False Negative
+337,10.0,1,0.0196502413669651,0.62,0,Non-Depressed,Depressed,FN,-0.6003497586330349,False Negative

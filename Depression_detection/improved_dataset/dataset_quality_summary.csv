@@ -1,0 +1,4 @@
+split,records,non_depressed,depressed,audio_bad_count,image_bad_count,text_bad_count,all_modalities_bad_count
+train,107,77,30,30,0,6,0
+dev,35,23,12,14,0,3,0
+test,47,33,14,15,0,4,0

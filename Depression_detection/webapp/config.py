@@ -14,9 +14,17 @@ TOTAL_DIM = AUDIO_DIM + IMAGE_DIM + TEXT_DIM
 
 # ── Model Paths ──────────────────────────────────────────────
 MODEL_LR_CLF    = os.path.join(MODELS_DIR, "LogisticRegression_classifier.pkl")
+MODEL_GB_ACC_CLF = os.path.join(MODELS_DIR, "GradientBoostingClf_Accuracy_classifier.pkl")
+MODEL_AUDIO_ONLY_CLF = os.path.join(MODELS_DIR, "AudioOnly_screening_classifier.pkl")
+MODEL_VISUAL_ONLY_CLF = os.path.join(MODELS_DIR, "VisualOnly_screening_classifier.pkl")
+MODEL_DEPVIDMOOD_VISUAL_DISTRESS_CLF = os.path.join(MODELS_DIR, "DepVidMood_SoftVotingEnsemble_visual_distress_classifier.pkl")
+MODEL_DEPVIDMOOD_VISUAL_DISTRESS_SCALER = os.path.join(MODELS_DIR, "DepVidMood_VisualDistressScaler.pkl")
+MODEL_DEPVIDMOOD_VISUAL_DISTRESS_CNN = os.path.join(MODELS_DIR, "DepVidMood_CNN_visual_distress.pth")
 MODEL_RF_CLF    = os.path.join(MODELS_DIR, "RandomForestClf_classifier.pkl")
 MODEL_XGB_CLF   = os.path.join(MODELS_DIR, "XGBoostClf_classifier.pkl")
 MODEL_RF_REG    = os.path.join(MODELS_DIR, "RandomForestReg_regressor.pkl")
+MODEL_LINEAR_REG = os.path.join(MODELS_DIR, "LinearRegression_regressor.pkl")
+MODEL_ELASTIC_REG = os.path.join(MODELS_DIR, "ElasticNet_regressor.pkl")
 MODEL_XGB_REG   = os.path.join(MODELS_DIR, "XGBoostReg_regressor.pkl")
 MODEL_LGBM_REG  = os.path.join(MODELS_DIR, "LightGBMReg_regressor.pkl")
 MODEL_MLP_REG   = os.path.join(MODELS_DIR, "MLP_regressor.pth")
@@ -49,3 +57,16 @@ CORS_ORIGINS = ["*"]
 # absolute paths of compatible extractors before launching the app.
 OPENFACE_IMAGE_BINARY = os.environ.get("OPENFACE_IMAGE_BINARY", "")
 OPENFACE_VIDEO_BINARY = os.environ.get("OPENFACE_VIDEO_BINARY", "")
+
+# Optional API fallback for raw image uploads when OpenFace is unavailable.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+OPENAI_VISION_MODEL = os.environ.get("OPENAI_VISION_MODEL", "gpt-4.1-mini")
+
+# Optional Hugging Face text-safety classifier. Keep tokens in the environment,
+# never in source code.
+HF_TOKEN = os.environ.get("HF_TOKEN", "")
+HF_ZERO_SHOT_MODEL = os.environ.get(
+    "HF_ZERO_SHOT_MODEL",
+    "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7",
+)
+HF_IMAGE_EMOTION_MODEL = os.environ.get("HF_IMAGE_EMOTION_MODEL", "abhilash88/face-emotion-detection")

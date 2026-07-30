@@ -1,0 +1,13 @@
+Category,Model/System,Purpose,Accuracy,Precision,Recall,F1,AUC,MCC,Threshold,Status_vs_Base,Notes
+Base Paper,Base Paper,Reported baseline,0.85,0.73,0.85,0.79,0.73,0.68,,Reference baseline,Reference values from base paper
+Multimodal,Hybrid_GB_PHQ_Override,Best accuracy,0.8511,1.0,0.5,0.6667,0.79,0.6423,,"Beats: Accuracy, Precision, AUC","Beats: Accuracy, Precision, AUC"
+Multimodal,RecallOptimized_Logistic_RF_Override,Best recall,0.7234,0.5217,0.8571,0.6486,0.7771,0.4792,,"Beats: Recall, AUC","Beats: Recall, AUC"
+Multimodal,F1Optimized_Logistic_AND_GB,Best F1 balance,0.8298,0.6667,0.8571,0.75,0.7706,0.6353,,"Beats: Recall, AUC","Beats: Recall, AUC"
+Multimodal,GradientBoostingClf_Accuracy,Best precision / conservative model,0.8298,1.0,0.4286,0.6,0.79,0.5873,,"Beats: Precision, AUC","Beats: Precision, AUC"
+Multimodal Ensemble,WeightedSoftVoting,Best dev-selected balanced ensemble,0.8085,0.6667,0.7143,0.6897,0.7684,0.5521,0.31,Beats: AUC,GradientBoostingClf:0.125;RandomForestClf:0.250;ExtraTreesClf:0.375;SVC_RBF:0.250
+Text Only,Text_GradientBoosting,Best text-only accuracy from current embeddings,0.7872,1.0,0.2857,0.4444,0.7716,0.4683,0.5800000000000001,"Beats: Precision, AUC",
+Audio Only,Audio_SVC_RBF,Best audio-only accuracy from current 153-dim audio features,0.7021,0.0,0.0,0.0,0.3701,0.0,0.3,Below base paper,
+External Audio,AudioExt_SVC_RBF,Best DAIC + external audio branch,0.7234,0.6,0.2143,0.3158,0.6775,0.2279,0.8300000000000002,Below base paper,External audio improved audio-only accuracy from 0.7021 to 0.7234 on the DAIC test split.
+Visual Only,Visual_LogisticRegression,Best visual-only accuracy from CLNF/OpenFace features,0.7021,0.5,0.2857,0.3636,0.6667,0.2002,0.5800000000000001,Below base paper,
+Auxiliary Visual CNN,DepVidMood_CNN_visual_distress,Raw-image expression distress fallback,0.8196,0.8908,0.7524,0.8158,0.9028,0.6503,,"Auxiliary dataset, not DAIC-comparable","DepVidMood test split; supports visual website fallback, not a DAIC PHQ-8 depression metric."
+Improved Dataset,Improved_GradientBoosting,Best clean dataset-improvement run,0.7872,0.8333,0.3571,0.5,0.6775,0.4479,0.6300000000000001,Beats: Precision,

@@ -1,0 +1,4 @@
+file,participant_id_column,score_column,binary_column,excluded_metadata_columns,suspicious_unused_columns,leakage_status
+train_split_Depression_AVEC.csv,Participant_ID,PHQ8_Score,PHQ8_Binary,"Gender,PHQ8_NoInterest,PHQ8_Depressed,PHQ8_Sleep,PHQ8_Tired,PHQ8_Appetite,PHQ8_Failure,PHQ8_Concentrating,PHQ8_Moving","PHQ8_NoInterest,PHQ8_Depressed,PHQ8_Sleep,PHQ8_Tired,PHQ8_Appetite,PHQ8_Failure,PHQ8_Concentrating,PHQ8_Moving",OK: model uses only .npy modality features and target labels
+dev_split_Depression_AVEC.csv,Participant_ID,PHQ8_Score,PHQ8_Binary,"Gender,PHQ8_NoInterest,PHQ8_Depressed,PHQ8_Sleep,PHQ8_Tired,PHQ8_Appetite,PHQ8_Failure,PHQ8_Concentrating,PHQ8_Moving","PHQ8_NoInterest,PHQ8_Depressed,PHQ8_Sleep,PHQ8_Tired,PHQ8_Appetite,PHQ8_Failure,PHQ8_Concentrating,PHQ8_Moving",OK: model uses only .npy modality features and target labels
+full_test_split.csv,Participant_ID,PHQ_Score,PHQ_Binary,Gender,,OK: model uses only .npy modality features and target labels

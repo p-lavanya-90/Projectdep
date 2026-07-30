@@ -31,3 +31,6 @@ Depression_detection/raw_features/
 
 # Generated feature files
 *.npy
+# Training datasets and large generated models
+Depression_detection/external_training_data/
+Depression_detection/models/*.pkl

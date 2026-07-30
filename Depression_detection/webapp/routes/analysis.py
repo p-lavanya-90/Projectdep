@@ -6,8 +6,13 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 from fastapi import APIRouter
-from webapp.services.analysis_service import (get_eda_stats, get_regression_results,
-                                               get_classification_results, get_best_models)
+from webapp.services.analysis_service import (
+    get_eda_stats,
+    get_regression_results,
+    get_classification_results,
+    get_best_models,
+    get_master_results,
+)
 
 router = APIRouter(prefix="/api/analysis", tags=["Analysis"])
 
@@ -34,3 +39,9 @@ async def classification():
 async def best_model():
     """Return the single best regression and classification model."""
     return get_best_models()
+
+
+@router.get("/master-results")
+async def master_results():
+    """Return final base-paper, multimodal, unimodal, and external benchmark table."""
+    return get_master_results()

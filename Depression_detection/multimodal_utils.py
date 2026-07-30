@@ -114,19 +114,33 @@ def extract_image_features_openface(path, expected_dim=160):
         output_path = Path(output_dir)
         au_files = list(output_path.rglob("*_CLNF_AUs.txt"))
         feature_files = list(output_path.rglob("*_CLNF_features.txt"))
-        if not au_files and not feature_files:
+        csv_files = list(output_path.rglob("*.csv"))
+        if not au_files and not feature_files and not csv_files:
             raise RuntimeError(
                 "OpenFace output is not compatible with the training schema. "
-                "Configure the CLNF exporter that creates *_CLNF_AUs.txt and "
-                "*_CLNF_features.txt files."
+                "Configure a CLNF exporter or modern OpenFace CSV exporter."
             )
 
-        # Reuse the identical aggregation used to build preprocessed_images.
-        extractor = FeatureExtractor.__new__(FeatureExtractor)
-        vector = extractor.extract_image_features_from_clnf(
-            str(au_files[0]) if au_files else "",
-            str(feature_files[0]) if feature_files else "",
-        ).astype(np.float32).flatten()
+        if au_files or feature_files:
+            extractor = FeatureExtractor.__new__(FeatureExtractor)
+            vector = extractor.extract_image_features_from_clnf(
+                str(au_files[0]) if au_files else "",
+                str(feature_files[0]) if feature_files else "",
+            ).astype(np.float32).flatten()
+        else:
+            df = pd.read_csv(csv_files[0], skipinitialspace=True)
+            numeric = df.select_dtypes(include=[np.number]).drop(
+                columns=["frame", "face_id", "timestamp", "confidence", "success"],
+                errors="ignore",
+            )
+            if numeric.empty:
+                raise RuntimeError("OpenFace CSV did not contain numeric feature columns.")
+            vector = numeric.mean(axis=0).to_numpy(dtype=np.float32).flatten()
+
+    if vector.size < expected_dim:
+        vector = np.pad(vector, (0, expected_dim - vector.size))
+    elif vector.size > expected_dim:
+        vector = vector[:expected_dim]
 
     if vector.size != expected_dim or not np.isfinite(vector).all():
         raise RuntimeError(

@@ -111,15 +111,26 @@ async def predict_audio(
         # Close handle before proceeding for Windows compatibility
 
         tmp_wav = convert_to_wav(tmp_original)
-        from webapp.services.traditional_service import predict_traditional
+        from webapp.services.traditional_service import predict_audio_only, predict_traditional
         audio_feat = extract_audio_features_raw(tmp_wav)
-        result = predict_traditional(text_feat=None, audio_feat=audio_feat)
 
+        transcript = ""
         if return_transcript:
-            result["transcript"] = transcribe_audio(tmp_wav)
+            transcript = transcribe_audio(tmp_wav).strip()
+
+        if transcript:
+            text_feat = extract_text_features(transcript)
+            result = predict_traditional(text_feat=text_feat, audio_feat=audio_feat, raw_text=transcript)
+            result["transcript"] = transcript
             result["transcript_note"] = "Audio features + Automatic Speech Recognition."
+            result["note"] = "Audio prediction used both vocal features and transcript text."
+        else:
+            result = predict_audio_only(audio_feat)
+            if return_transcript:
+                result["transcript"] = transcript
+                result["transcript_note"] = "Transcription was unavailable; prediction used audio features only."
+            result["note"] = "Vocal analysis via MFCC + spectral aggregation using an audio-only screening model."
         
-        result["note"] = "Vocal analysis via MFCC + Spectral aggregation."
         return result
     except Exception as e:
         import traceback
@@ -138,11 +149,30 @@ async def predict_image(image_file: UploadFile = File(...)):
         tmp_path = fp.name
     # Close handle before proceeding for Windows compatibility
     try:
-        from webapp.services.traditional_service import predict_traditional
-        feat = (extract_image_npy_raw(tmp_path) if suffix == ".npy"
-                else extract_image_features_raw(tmp_path))
-        result = predict_traditional(text_feat=None, audio_feat=None, image_feat=feat)
-        result["note"] = "Image features extracted with training-compatible OpenFace/CLNF processing."
+        from webapp.services.traditional_service import predict_image_only, predict_raw_image_distress
+        from webapp.services.image_emotion_service import analyze_image_emotion_with_hf
+        from webapp.services.vision_api_service import analyze_visual_distress_with_api
+        if suffix == ".npy":
+            feat = extract_image_npy_raw(tmp_path)
+            result = predict_image_only(feat)
+            result["note"] = "Image features extracted with training-compatible OpenFace/CLNF processing and visual-only screening."
+        else:
+            try:
+                feat = extract_image_features_raw(tmp_path)
+                result = predict_image_only(feat)
+                result["note"] = "Image features extracted with training-compatible OpenFace/CLNF processing and visual-only screening."
+            except Exception as extraction_error:
+                try:
+                    result = analyze_image_emotion_with_hf(tmp_path)
+                    if not result.get("available") or result.get("status") == "inconclusive":
+                        local_result = predict_raw_image_distress(tmp_path)
+                        local_result["hf_image_note"] = result.get("note", "HF image emotion unavailable.")
+                        result = local_result
+                    result["openface_note"] = str(extraction_error)
+                except Exception as local_visual_error:
+                    result = analyze_visual_distress_with_api(tmp_path)
+                    result["openface_note"] = str(extraction_error)
+                    result["local_visual_note"] = str(local_visual_error)
         return result
     except Exception as e:
         import traceback

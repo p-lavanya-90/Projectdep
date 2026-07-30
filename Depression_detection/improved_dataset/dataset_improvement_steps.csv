@@ -1,0 +1,8 @@
+step,status,output
+1_clean_or_flag_noisy_samples,done,dataset_quality_audit.csv
+2_improve_transcripts,prepared,No raw transcripts found; use preprocess_text.py after better transcripts are added.
+3_balance_classes,done,train rows 107 -> balanced rows 154
+4_better_feature_extraction,prepared,pipeline keeps BERT/audio/OpenFace feature slots; rerun preprocessors when improved extractors are available.
+5_external_training_data,template_created,external_training_data_template.csv
+6_train_only_augmentation,done,balanced rows 154 -> augmented rows 269
+7_remove_label_leakage,done,label_leakage_check.csv
